@@ -1,5 +1,5 @@
 # go-books-list-rest-api
-I created simple Rest API using go
+I created simple Rest API using Golang
 
 ## To run program
 
