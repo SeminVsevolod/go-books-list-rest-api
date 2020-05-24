@@ -30,7 +30,7 @@ func main() {
 	router.HandleFunc("/book/{id}", getBook).Methods("GET")
 	router.HandleFunc("/book", addBook).Methods("POST")
 	router.HandleFunc("/book", updateBook).Methods("PUT")
-	router.HandleFunc("/book{id}", removeBook).Methods("DELETE")
+	router.HandleFunc("/book/{id}", removeBook).Methods("DELETE")
 
 	log.Fatal(http.ListenAndServe(":8000", router))
 }
@@ -74,5 +74,15 @@ func updateBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func removeBook(w http.ResponseWriter, r *http.Request) {
-	log.Println("Removes one book")
+	params := mux.Vars(r)
+
+	numericID, _ := strconv.Atoi(params["id"])
+
+	for i, item := range books {
+		if item.ID == numericID {
+			books = append(books[:i], books[i+1:]...)
+		}
+	}
+
+	json.NewEncoder(w).Encode(books)
 }
