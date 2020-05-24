@@ -65,7 +65,6 @@ func getBooks(w http.ResponseWriter, r *http.Request) {
 	books = []Book{}
 
 	rows, err := db.Query("select * from books")
-	log.Println("rows->", rows)
 	logFatal(err)
 
 	defer rows.Close()
