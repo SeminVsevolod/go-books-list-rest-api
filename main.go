@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type Book struct {
@@ -35,12 +36,19 @@ func main() {
 }
 
 func getBooks(w http.ResponseWriter, r *http.Request) {
-	log.Println("Gets all books")
 	json.NewEncoder(w).Encode(books)
 }
 
 func getBook(w http.ResponseWriter, r *http.Request) {
-	log.Println("Gets one book")
+	params := mux.Vars(r)
+
+	numericID, _ := strconv.Atoi(params["id"])
+
+	for _, book := range books {
+		if book.ID == numericID {
+			json.NewEncoder(w).Encode(&book)
+		}
+	}
 }
 
 func addBook(w http.ResponseWriter, r *http.Request) {
