@@ -1,22 +1,30 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 )
 
 type Book struct {
-	ID		int 	`json:id`
-	Title 	string 	`json:title`
-	Author 	string 	`json:author`
-	Year 	string 	`json:year`
+	ID     int    `json:id`
+	Title  string `json:title`
+	Author string `json:author`
+	Year   string `json:year`
 }
 
 var books []Book
 
-func main()  {
+func main() {
 	router := mux.NewRouter()
+
+	books = append(books, Book{ID: 1, Title: "The Go Programming Language", Author: "Alan A. A. Donovan, Brian W. Kernighan", Year: "2015"},
+		Book{ID: 2, Title: "Concurrency in Go: Tools and Techniques for Developers", Author: "Cox-Buday, Katherine", Year: "2017"},
+		Book{ID: 3, Title: "Go in Action", Author: "William Kennedy, Brian Ketelsen, Erik St. Martin", Year: "2015"},
+		Book{ID: 4, Title: "An Introduction to Programming in Go", Author: "Caleb Doxsey", Year: "2012"},
+		Book{ID: 5, Title: "Introducing Go: Build Reliable, Scalable Programs", Author: "Doxsey, Caleb", Year: "2016"})
+
 	router.HandleFunc("/books", getBooks).Methods("GET")
 	router.HandleFunc("/book/{id}", getBook).Methods("GET")
 	router.HandleFunc("/book", addBook).Methods("POST")
@@ -28,6 +36,7 @@ func main()  {
 
 func getBooks(w http.ResponseWriter, r *http.Request) {
 	log.Println("Gets all books")
+	json.NewEncoder(w).Encode(books)
 }
 
 func getBook(w http.ResponseWriter, r *http.Request) {
