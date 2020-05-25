@@ -5,97 +5,104 @@ import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"go-books-list-rest-api/models"
+	bookRepo "go-books-list-rest-api/repository/book"
 	"log"
 	"net/http"
+	"strconv"
 )
 
-type Controller struct {
-}
+type Controller struct{}
 
 var books []models.Book
 
+// вывести лог с ошибкой
 func logFatal(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
+// Метод контроллера, возвращающий все книги в формате json
 func (c Controller) GetBooks(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var book models.Book
 		books = []models.Book{}
+		bookRepo := bookRepo.BookRepository{}
 
-		rows, err := db.Query("select * from books")
-		logFatal(err)
-
-		defer rows.Close()
-
-		for rows.Next() {
-			err := rows.Scan(&book.ID, &book.Title, &book.Author, &book.Year)
-			logFatal(err)
-
-			books = append(books, book)
-		}
+		books = bookRepo.GetBooks(db, book, books)
 
 		json.NewEncoder(w).Encode(books)
 	}
 }
 
+// Метод контроллера, возвращающий книгу в формате json по её id
 func (c Controller) GetBook(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var book models.Book
+		// получаем параметры запроса в виде словаря map[string]string
 		params := mux.Vars(r)
+		bookRepo := bookRepo.BookRepository{}
 
-		rows := db.QueryRow("select * from books where id=$1", params["id"])
-
-		err := rows.Scan(&book.ID, &book.Title, &book.Author, &book.Year)
+		// преобразовываем id из str в int
+		id, err := strconv.Atoi(params["id"])
 		logFatal(err)
 
+		// используем книжный репозиторий для вызова метода GetBook, возвращает книгу по её id
+		book = bookRepo.GetBook(db, book, id)
+
+		// возвращаем книгу с нужным id, преобразованную в json
 		json.NewEncoder(w).Encode(book)
 	}
 }
 
+// Метод контроллера, создающий новую книгу (возвращает созданную книгу)
 func (c Controller) AddBook(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var book models.Book
-		var bookID int
+		bookRepo := bookRepo.BookRepository{}
 
+		// преобразуем из json, переданного в Body в запросе, в экземпляр структуры книги book
 		json.NewDecoder(r.Body).Decode(&book)
 
-		err := db.QueryRow("insert into books (title, author, year) values($1, $2, $3) RETURNING id;",
-			book.Title, book.Author, book.Year).Scan(&bookID)
-		logFatal(err)
+		// используем книжный репозиторий для вызова метода AddBook, который добавляет новую книгу в таблицу книг, и возвращает созданную книгу
+		book = bookRepo.AddBook(db, book)
 
-		json.NewEncoder(w).Encode(bookID)
+		// возвращаем созданную книгу, преобразованную в json
+		json.NewEncoder(w).Encode(book)
 	}
 }
 
+// Метод контроллера, обновляющий книгу по ID (возвращает кол-во обновленных строк БД)
 func (c Controller) UpdateBook(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var book models.Book
+		// преобразуем из json, переданного в Body в запросе, в экземпляр структуры книги book
 		json.NewDecoder(r.Body).Decode(&book)
+		bookRepo := bookRepo.BookRepository{}
 
-		result, err := db.Exec("update books set title=$1, author=$2, year=$3 where id=$4 RETURNING id;",
-			&book.Title, &book.Author, &book.Year, &book.ID)
-		logFatal(err)
+		// используем книжный репозиторий для вызова метода UpdateBook, который обновляет существующую книгу по её id, и возвращает кол-во обновленных строк
+		rowsUpdated := bookRepo.UpdateBook(db, book)
 
-		rowsUpdated, err := result.RowsAffected()
-		logFatal(err)
-
-		json.NewEncoder(w).Encode(rowsUpdated)
+		// возвращаем кол-во обновленных строк, преобразованное в json
+		json.NewEncoder(w).Encode(map[string]int64{"rowsUpdated": rowsUpdated})
 	}
 }
 
+// Метод контроллера, удаляющий книгу по её ID (возвращает кол-во удаленных строк БД)
 func (c Controller) RemoveBook(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// получаем параметры запроса в виде словаря map[string]string
 		params := mux.Vars(r)
+		bookRepo := bookRepo.BookRepository{}
 
-		result, err := db.Exec("delete from books where id=$1", params["id"])
+		// преобразовываем id из str в int
+		id, err := strconv.Atoi(params["id"])
 		logFatal(err)
 
-		rowsDeleted, err := result.RowsAffected()
-		logFatal(err)
+		// используем книжный репозиторий для вызова метода RemoveBook, который удаляет книгу по её id, и возвращает кол-во удаленных строк
+		rowsDeleted := bookRepo.RemoveBook(db, id)
 
-		json.NewEncoder(w).Encode(rowsDeleted)
+		// возвращаем кол-во удаленных строк, преобразованное в json
+		json.NewEncoder(w).Encode(map[string]int64{"rowsDeleted": rowsDeleted})
 	}
 }
