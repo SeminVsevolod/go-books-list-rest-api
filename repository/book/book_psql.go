@@ -2,6 +2,7 @@ package bookRepository
 
 import (
 	"database/sql"
+	"fmt"
 	"go-books-list-rest-api/models"
 	"log"
 )
@@ -34,49 +35,72 @@ func (b BookRepository) GetBooks(db *sql.DB, book models.Book, books []models.Bo
 }
 
 // Метод книжного репозитория, возвращающий книгу с определенным id в таблице books
-func (b BookRepository) GetBook(db *sql.DB, book models.Book, id int) models.Book {
+func (b BookRepository) GetBook(db *sql.DB, id int) (models.Book, error) {
+	var book models.Book
+
 	rows := db.QueryRow("select * from books where id=$1", id)
 
 	err := rows.Scan(&book.ID, &book.Title, &book.Author, &book.Year)
-	logFatal(err)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return book, fmt.Errorf("книга c id %v не найдена", id)
+		} else {
+			logFatal(err)
+		}
+	}
 
 	// возвращает найденную книгу по её ID
-	return book
+	return book, nil
 }
 
 // Метод книжного репозитория, добавляющим новую книгу в таблицу books
-func (b BookRepository) AddBook(db *sql.DB, book models.Book) models.Book {
+func (b BookRepository) AddBook(db *sql.DB, book models.Book) (models.Book, error) {
 	err := db.QueryRow("insert into books (title, author, year) values($1, $2, $3) RETURNING id;",
 		book.Title, book.Author, book.Year).Scan(&book.ID)
-
 	logFatal(err)
+	if err != nil {
+		return book, fmt.Errorf("не удалось создать книгу по причине: %v", err)
+	}
 
 	// возвращает созданную книгу (вместе с её ID, полученным из БД)
-	return book
+	return book, nil
 }
 
 // Метод книжного репозитория, обновляющий существующую книгу по её id в таблице books
-func (b BookRepository) UpdateBook(db *sql.DB, book models.Book) int64 {
+func (b BookRepository) UpdateBook(db *sql.DB, book models.Book) (int64, error) {
+	// используем метод получения книги по её id
+	_, errNotFinded := b.GetBook(db, book.ID)
+	// если есть ошибка, значит книга не найдена, возвращаем ошибку
+	if errNotFinded != nil {
+		return 0, errNotFinded
+	}
+
 	result, err := db.Exec("update books set title=$1, author=$2, year=$3 where id=$4 RETURNING id",
 		&book.Title, &book.Author, &book.Year, &book.ID)
-
 	logFatal(err)
 
 	rowsUpdated, err := result.RowsAffected()
 	logFatal(err)
+	if err != nil {
+		return 0, fmt.Errorf("не удалось обновить книгу по причине: %v", err)
+	}
 
 	// возвращает кол-во обновленных строк таблицы
-	return rowsUpdated
+	return rowsUpdated, nil
 }
 
 // Метод книжного репозитория, удяляющий существующую книгу по её id в таблице books
-func (b BookRepository) RemoveBook(db *sql.DB, id int) int64 {
+func (b BookRepository) RemoveBook(db *sql.DB, id int) (int64, error) {
 	result, err := db.Exec("delete from books where id = $1", id)
 	logFatal(err)
 
 	rowsDeleted, err := result.RowsAffected()
 	logFatal(err)
+	if err != nil {
+		return 0, fmt.Errorf("не удалось удалить книгу по причине: %v", err)
+	}
 
 	// возвращает кол-во удаленных строк таблицы
-	return rowsDeleted
+	return rowsDeleted, nil
 }

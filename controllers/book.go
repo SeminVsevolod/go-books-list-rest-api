@@ -31,6 +31,7 @@ func (c Controller) GetBooks(db *sql.DB) http.HandlerFunc {
 
 		books = bookRepo.GetBooks(db, book, books)
 
+		// возвращаем список книг, преобразованный в json
 		json.NewEncoder(w).Encode(books)
 	}
 }
@@ -48,7 +49,14 @@ func (c Controller) GetBook(db *sql.DB) http.HandlerFunc {
 		logFatal(err)
 
 		// используем книжный репозиторий для вызова метода GetBook, возвращает книгу по её id
-		book = bookRepo.GetBook(db, book, id)
+		book, err = bookRepo.GetBook(db, id)
+
+		// возвращаем код 404 и ошибку если книга с этим id не найдена
+		if err != nil {
+			w.WriteHeader(404)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
 
 		// возвращаем книгу с нужным id, преобразованную в json
 		json.NewEncoder(w).Encode(book)
@@ -65,7 +73,14 @@ func (c Controller) AddBook(db *sql.DB) http.HandlerFunc {
 		json.NewDecoder(r.Body).Decode(&book)
 
 		// используем книжный репозиторий для вызова метода AddBook, который добавляет новую книгу в таблицу книг, и возвращает созданную книгу
-		book = bookRepo.AddBook(db, book)
+		book, err := bookRepo.AddBook(db, book)
+
+		// возвращаем код 400 и ошибку если не удалось создать книгу
+		if err != nil {
+			w.WriteHeader(400)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
 
 		// возвращаем созданную книгу, преобразованную в json
 		json.NewEncoder(w).Encode(book)
@@ -81,7 +96,14 @@ func (c Controller) UpdateBook(db *sql.DB) http.HandlerFunc {
 		bookRepo := bookRepo.BookRepository{}
 
 		// используем книжный репозиторий для вызова метода UpdateBook, который обновляет существующую книгу по её id, и возвращает кол-во обновленных строк
-		rowsUpdated := bookRepo.UpdateBook(db, book)
+		rowsUpdated, err := bookRepo.UpdateBook(db, book)
+
+		// возвращаем код 400 и ошибку если не удалось обновить книгу
+		if err != nil {
+			w.WriteHeader(400)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
 
 		// возвращаем кол-во обновленных строк, преобразованное в json
 		json.NewEncoder(w).Encode(map[string]int64{"rowsUpdated": rowsUpdated})
@@ -100,7 +122,14 @@ func (c Controller) RemoveBook(db *sql.DB) http.HandlerFunc {
 		logFatal(err)
 
 		// используем книжный репозиторий для вызова метода RemoveBook, который удаляет книгу по её id, и возвращает кол-во удаленных строк
-		rowsDeleted := bookRepo.RemoveBook(db, id)
+		rowsDeleted, err := bookRepo.RemoveBook(db, id)
+
+		// возвращаем код 400 и ошибку если не удалось удалить книгу
+		if err != nil {
+			w.WriteHeader(400)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
 
 		// возвращаем кол-во удаленных строк, преобразованное в json
 		json.NewEncoder(w).Encode(map[string]int64{"rowsDeleted": rowsDeleted})
