@@ -17,7 +17,7 @@ func logFatal(err error) {
 }
 
 // Метод книжного репозитория, возвращающий все книги в БД в таблице books
-func (b BookRepository) GetBooks(db *sql.DB, book models.Book, books []models.Book) []models.Book {
+func (b BookRepository) GetBooks(db *sql.DB, book models.Book, books []models.Book) ([]models.Book, error) {
 	rows, err := db.Query("select * from books")
 	logFatal(err)
 
@@ -31,7 +31,7 @@ func (b BookRepository) GetBooks(db *sql.DB, book models.Book, books []models.Bo
 	}
 
 	// возвращает список всех книг в БД в таблице БД books
-	return books
+	return books, nil
 }
 
 // Метод книжного репозитория, возвращающий книгу с определенным id в таблице books
@@ -58,7 +58,6 @@ func (b BookRepository) GetBook(db *sql.DB, id int) (models.Book, error) {
 func (b BookRepository) AddBook(db *sql.DB, book models.Book) (models.Book, error) {
 	err := db.QueryRow("insert into books (title, author, year) values($1, $2, $3) RETURNING id;",
 		book.Title, book.Author, book.Year).Scan(&book.ID)
-	logFatal(err)
 	if err != nil {
 		return book, fmt.Errorf("не удалось создать книгу по причине: %v", err)
 	}
@@ -81,7 +80,6 @@ func (b BookRepository) UpdateBook(db *sql.DB, book models.Book) (int64, error) 
 	logFatal(err)
 
 	rowsUpdated, err := result.RowsAffected()
-	logFatal(err)
 	if err != nil {
 		return 0, fmt.Errorf("не удалось обновить книгу по причине: %v", err)
 	}
@@ -96,7 +94,6 @@ func (b BookRepository) RemoveBook(db *sql.DB, id int) (int64, error) {
 	logFatal(err)
 
 	rowsDeleted, err := result.RowsAffected()
-	logFatal(err)
 	if err != nil {
 		return 0, fmt.Errorf("не удалось удалить книгу по причине: %v", err)
 	}

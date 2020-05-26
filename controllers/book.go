@@ -28,8 +28,15 @@ func (c Controller) GetBooks(db *sql.DB) http.HandlerFunc {
 		var book models.Book
 		books = []models.Book{}
 		bookRepo := bookRepo.BookRepository{}
+		var err error
+		books, err = bookRepo.GetBooks(db, book, books)
 
-		books = bookRepo.GetBooks(db, book, books)
+		// возвращаем код 400 и ошибку
+		if err != nil {
+			w.WriteHeader(400)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
 
 		// возвращаем список книг, преобразованный в json
 		json.NewEncoder(w).Encode(books)
